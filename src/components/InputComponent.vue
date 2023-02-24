@@ -2,8 +2,9 @@
   <section class="row my-3">
     <div class="col-3">
       <input
-        v-model="price"
+        :value="price"
         @change="onChange($event, 'price')"
+        @input="onInput($event, 'price')"
         type="text"
         id="price"
         class="form-control"
@@ -14,8 +15,9 @@
     </div>
     <div class="col-3">
       <input
-        v-model="qty"
+        :value="qty"
         @change="onChange($event, 'qty')"
+        @input="onInput($event, 'qty')"
         type="text"
         id="qty"
         class="form-control"
@@ -26,8 +28,9 @@
     </div>
     <div class="col-3">
       <input
-        v-model="amount"
+        :value="amount"
         @change="onChange($event, 'amount')"
+        @input="onInput($event, 'amount')"
         type="text"
         id="amount"
         class="form-control"
@@ -51,29 +54,14 @@ export default {
   name: 'InputComponent',
 
   computed: {
-    amount: {
-      set(amount) {
-        this.$store.commit('setAmount', { amount })
-      },
-      get() {
-        return this.$store.getters.amount
-      }
+    amount() {
+      return this.$store.getters.amount
     },
-    price: {
-      set(price) {
-        this.$store.commit('setPrice', { price })
-      },
-      get() {
-        return this.$store.getters.price
-      }
+    price() {
+      return this.$store.getters.price
     },
-    qty: {
-      set(qty) {
-        this.$store.commit('setQty', { qty })
-      },
-      get() {
+    qty() {
         return this.$store.getters.qty
-      }
     }
   },
   data: () => ({
@@ -83,6 +71,10 @@ export default {
     onChange({ target }, key)
     {
       this.$emit('onChange', { target, key })
+    },
+    onInput({ target }, key)
+    {
+      this.$emit('onInput', { target, key })
     }
   },
   async mounted() {
@@ -95,10 +87,9 @@ export default {
           [{
             id: ref,
             message: 'Not a Number',
-            validator: (target, key) => {
+            validator: target => {
               if (Number.isNaN(Number(target.value))) {
                 target.value = target.value.toString().slice(0, target.value.length - 1)
-                this.$store.commit('setOrder', { key, value: target.value })
                 return false
               }
 

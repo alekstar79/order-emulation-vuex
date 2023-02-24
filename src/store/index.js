@@ -5,9 +5,8 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    events: [],
-
     storage: {},
+    events: [],
 
     order: {
       amount: 0,
@@ -17,22 +16,23 @@ export default new Vuex.Store({
     }
   },
   getters: {
+    nonce(state) {
+      return Number(state.order.nonce)
+    },
     amount(state) {
-      Object.assign(state.order, { amount: state.order.price * state.order.qty })
+      const amount = Number(state.order.amount)
 
-      const { amount } = state.order
-
-      return Number(amount) > 0 ? amount : null
+      return amount > 0 ? amount : null
     },
     price(state) {
-      const { price } = state.order
+      const price = Number(state.order.price)
 
-      return Number(price) > 0 ? price : null
+      return price > 0 ? price : null
     },
     qty(state) {
-      const { qty } = state.order
+      const qty = Number(state.order.qty)
 
-      return Number(qty) > 0 ? qty : null
+      return qty > 0 ? qty : null
     }
   },
   mutations: {
@@ -56,9 +56,13 @@ export default new Vuex.Store({
     {
       state.order.nonce = nonce
     },
-    setOrder(state, { key, value })
+    setOrderByKey(state, { key, value })
     {
       state.order[key] = value
+    },
+    setOrder(state, payload)
+    {
+      state.order = payload
     }
   },
   actions: {
