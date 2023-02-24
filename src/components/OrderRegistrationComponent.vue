@@ -72,7 +72,7 @@ export default {
   },
   data: () => ({
     archiver: Archiver.init(),
-    label: 'По первому полю',
+    label: 'Первое измененное',
 
     correction: false,
     byFirst: true,
@@ -142,7 +142,7 @@ export default {
   watch: {
     order: {
       deep: true,
-      handler()
+      handler(/* { price, qty, amount } */)
       {
         if (this.correction || !this.archiver.lastChanged) return
 
@@ -172,9 +172,9 @@ export default {
                 }
                 break
               case 'price':
-                if (!this.order.amount) {
+                // if (!this.order.amount) {
                   this.amount = amount
-                }
+                // }
 
                 switch (field) {
                   case 'qty':
@@ -186,9 +186,9 @@ export default {
                 }
                 break
               case 'qty':
-                if (!this.order.amount) {
+                // if (!this.order.amount) {
                   this.amount = amount
-                }
+                // }
 
                 switch (field) {
                   case 'price':
@@ -258,7 +258,7 @@ export default {
     onChange: debounce(function({ target, key, extend, action = 'было изменено' }) {
       this.$store.commit('setNonce', { nonce: this.nonce + 1 })
 
-      this.events.unshift({
+      extend && this.events.unshift({
         key, desc: `${this.nonce} ${key} ${action} ${target?.value || ''}`, extend
       })
     }),
