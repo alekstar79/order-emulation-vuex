@@ -3,8 +3,8 @@
     <div class="col-3">
       <input
         :value="price"
-        @change="onChange($event, 'price')"
         @input="onInput($event, 'price')"
+        @change="onChange({ key: 'price' })"
         type="text"
         id="price"
         class="form-control"
@@ -16,8 +16,8 @@
     <div class="col-3">
       <input
         :value="qty"
-        @change="onChange($event, 'qty')"
         @input="onInput($event, 'qty')"
+        @change="onChange({ key: 'qty' })"
         type="text"
         id="qty"
         class="form-control"
@@ -29,8 +29,8 @@
     <div class="col-3">
       <input
         :value="amount"
-        @change="onChange($event, 'amount')"
         @input="onInput($event, 'amount')"
+        @change="onChange({ key: 'amount' })"
         type="text"
         id="amount"
         class="form-control"
@@ -40,7 +40,11 @@
       <label for="amount"><sub>Общая стоимость</sub></label>
     </div>
     <div class="col-3">
-      <button @click="$emit('send')" class="btn btn-outline-secondary">
+      <button
+        class="btn btn-outline-secondary"
+        @click="$emit('send')"
+        :disabled="forbidden"
+      >
         Добавить
       </button>
     </div>
@@ -54,6 +58,10 @@ export default {
   name: 'InputComponent',
 
   computed: {
+    forbidden() {
+      return Object.keys(this.$store.getters.order).filter(k => k !== 'nonce')
+        .some(k => this.$store.getters.order[k] === null)
+    },
     amount() {
       return this.$store.getters.amount
     },
@@ -68,13 +76,13 @@ export default {
     validators: []
   }),
   methods: {
-    onChange({ target }, key)
-    {
-      this.$emit('onChange', { target, key })
-    },
     onInput({ target }, key)
     {
       this.$emit('onInput', { target, key })
+    },
+    onChange({ key })
+    {
+      this.$emit('onChange', { key })
     }
   },
   async mounted() {

@@ -7,7 +7,6 @@ export default new Vuex.Store({
   state: {
     storage: {},
     events: [],
-
     order: {
       amount: 0,
       nonce: 0,
@@ -16,6 +15,9 @@ export default new Vuex.Store({
     }
   },
   getters: {
+    order(state) {
+      return state.order
+    },
     nonce(state) {
       return Number(state.order.nonce)
     },
@@ -64,7 +66,5 @@ export default new Vuex.Store({
     {
       state.order = payload
     }
-  },
-  actions: {
   }
 })

@@ -13,8 +13,8 @@
 
     <InputComponent @onChange="onChange" @onInput="onInput" @send="send" />
 
-    <!-- start: можно еще декомпозировать код на два компонента, но для примера вполне достаточно -->
-    <section class="row my-3">
+    <!-- start: можно еще декомпозировать код на два компонента -->
+    <!-- 1 --><section class="row my-3">
       <div class="col-12">
         <div class="card">
           <div class="card-header">
@@ -28,7 +28,7 @@
       </div>
     </section>
 
-    <section class="row my-3">
+    <!-- 2 --><section class="row my-3">
       <div class="col-12">
         <div class="card">
           <div class="card-header">
@@ -78,12 +78,23 @@ export default {
     byFirst: true,
 
     validators: [],
-    events: []
+    events: [],
+
+    buffer: {
+      amount: 0,
+      nonce: 0,
+      price: 0,
+      qty: 0
+    }
   }),
   computed: {
     representation()
     {
-      return `<pre>${stringify(this.storage)}</pre>`
+      return `<pre>${this.storage}</pre>`
+    },
+    storage()
+    {
+      return this.$store.state.storage
     },
     enabled: {
       set(v) {
@@ -133,84 +144,6 @@ export default {
       get() {
         return this.$store.state.order
       }
-    },
-    storage()
-    {
-      return this.$store.state.storage
-    }
-  },
-  watch: {
-    order: {
-      deep: true,
-      handler(/* { price, qty, amount } */)
-      {
-        if (this.correction || !this.archiver.lastChanged) return
-
-        this.correction = true
-
-        const first = this.archiver.firstChanged
-        const last = this.archiver.lastChanged
-        const now = this.archiver.nowChange
-
-        const field = this.byFirst ? first : last
-
-        this.$store.commit('setOrderByKey', {
-          key: field,
-
-          value: (value => {
-            const amount = this.price * this.qty
-
-            switch (now) {
-              case 'amount':
-                switch (field) {
-                  case 'qty':
-                    this.price && (value = this.amount / this.price)
-                    break
-                  case 'price':
-                    this.qty && (value = this.amount / this.qty)
-                    break
-                }
-                break
-              case 'price':
-                // if (!this.order.amount) {
-                  this.amount = amount
-                // }
-
-                switch (field) {
-                  case 'qty':
-                    this.amount && (value = this.amount / this.price)
-                    break
-                  case 'amount':
-                    this.qty && (value = this.price * this.qty)
-                    break
-                }
-                break
-              case 'qty':
-                // if (!this.order.amount) {
-                  this.amount = amount
-                // }
-
-                switch (field) {
-                  case 'price':
-                    this.amount && (value = this.amount / this.qty)
-                    break
-                  case 'amount':
-                    this.price && (value = this.qty * this.price)
-                    break
-                }
-            }
-
-            if (value >= Infinity) {
-              value = 0
-            }
-
-            return value
-
-          })(this[field])
-        })
-
-        this.correction = false
-      }
     }
   },
   methods: {
@@ -220,64 +153,135 @@ export default {
     {
       target.closest('.dropdown').lastElementChild?.classList.toggle('dropdown-menu--expanded')
     },
-    beforeSend()
+    beforeSend(key = 'submit')
     {
       this.onChange({
-        key: 'submit',
-        action: 'отправка на сервер',
+        action: '(отправка на сервер)',
         extend: `
           <pre>send: ${stringify(this.order)}</pre><br>
-          <pre>local: ${stringify(this.storage)}</pre>
-        `
+          <pre>local: ${this.storage}</pre>
+        `,
+        key
       })
     },
-    afterSend(success)
+    afterSend(success, key = 'response')
     {
       this.onChange({
-        key: 'response',
-        action: 'ответ сервера',
+        action: '(ответ сервера)',
         extend: `
           <pre>response: ${JSON.stringify({ success }, null, 2)}</pre><br>
-          <pre>local: ${stringify(this.storage)}</pre>
-        `
+          <pre>local: ${this.storage}</pre>
+        `,
+        key
       })
     },
     async send()
     {
       this.beforeSend()
 
-      const { success } = await sendRequest(stringify(this.order))
+      const { success } = await sendRequest(this.order)
 
       if (success) {
-        window.localStorage.setItem('order', stringify(this.order))
-        this.setStorage(Object.assign({}, this.order))
+        localStorage.setItem('order', stringify(this.order))
+        this.setStorage(stringify(this.order))
       }
 
       this.afterSend(success)
     },
-    onChange: debounce(function({ target, key, extend, action = 'было изменено' }) {
-      this.$store.commit('setNonce', { nonce: this.nonce + 1 })
+    onChange: debounce(function({ extend, key = '', action = '' }) {
+      const nonce = extend ? (this.nonce += 1) : +this.nonce
 
-      extend && this.events.unshift({
-        key, desc: `${this.nonce} ${key} ${action} ${target?.value || ''}`, extend
+      if (!['submit','response'].includes(key)) {
+        return this.flush(this.buffer[key])
+      }
+
+      this.events.unshift({
+        desc: `${nonce} ${key} ${action}`,
+        extend,
+        key
       })
     }),
     onInput: debounce(function({ target, key }) {
-      this.$store.commit('setOrderByKey', { key, value: +target.value })
       this.archiver.nowChange = key
-    })
+      this.buffer[key] = +target.value
+    }),
+    flush(changed)
+    {
+      let first, last, now, field, amount, price, qty, value
+
+      first = this.archiver.firstChanged
+      last = this.archiver.lastChanged
+      now = this.archiver.nowChange
+
+      field = this.byFirst ? first : last
+
+      value = this[field]
+      amount = this.amount
+      price = this.price
+      qty = this.qty
+
+      switch (now) {
+        case 'amount':
+          switch (field) {
+            case 'qty':
+              price ??= changed / qty
+              price && (value = changed / price)
+              break
+            case 'price':
+              qty ??= changed / price
+              qty && (value = changed / qty)
+              break
+          }
+          break
+        case 'price':
+          switch (field) {
+            case 'qty':
+              amount ??= changed * qty
+              amount && (value = amount / changed)
+              break
+            case 'amount':
+              qty ??= amount / changed
+              qty && (value = qty * changed)
+              break
+          }
+          break
+        case 'qty':
+          switch (field) {
+            case 'price':
+              amount ??= price * changed
+              amount && (value = amount / changed)
+              break
+            case 'amount':
+              price ??= amount / changed
+              price && (value = price * changed)
+              break
+          }
+      }
+
+      if (value >= Infinity) {
+        value = 0
+      }
+
+      this.$store.commit(
+        'setOrder',
+        Object.assign(
+          this.order,
+          { amount, price, qty },
+          {
+            [field]: value,
+            [now]: changed
+          }
+        )
+      )
+    }
   },
   beforeMount()
   {
-    if (!window.localStorage.getItem('order')) {
-      window.localStorage.setItem('order', stringify(this.order))
+    if (!localStorage.getItem('order')) {
+      localStorage.setItem('order', stringify(this.order))
     }
 
-    this.setStorage(
-      JSON.parse(
-        window.localStorage.getItem('order')
-      )
-    )
+    this.setStorage(localStorage.getItem('order'))
   }
 }
 </script>
