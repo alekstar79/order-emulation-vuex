@@ -87,7 +87,7 @@ export default {
     },
     enabled: {
       set(v) {
-        this.label = v ? 'По первому полю' : 'По последнему полю'
+        this.label = v ? 'Первое измененное' : 'Последнее измененное'
         this.byFirst = v
       },
       get() {
@@ -315,7 +315,7 @@ export default {
 
     .vue-switcher__label {
       margin: 0 10px 2px 0;
-      font-size: 1em;
+      font-size: .9em;
       display: block;
     }
   }
